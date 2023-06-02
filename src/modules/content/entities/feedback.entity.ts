@@ -35,3 +35,5 @@ export class FeedBackEntity extends BaseEntity {
   })
   wall: WallEntity
 }
+
+// createForeignKeyConstraints: false

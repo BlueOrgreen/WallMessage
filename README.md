@@ -32,3 +32,16 @@ export class ForumModule {}
 使用 验证库 `class-validator` 
 body和query数据的验证一般使用全局管道 `ValidationPipe` +  `dto`
 对于param数据的验证一般直接使用预定义或者自定义的非全局管道, `ParseUUIDPipe`
+
+
+
+### BUG
+
+QueryFailedError: Cannot add or update a child row: a foreign key constraint fails (`message_wall`.`#sql-ab_43`, CONSTRAINT `FK_7f499b4d1b3c8242bfbbe1adb94` FOREIGN KEY (`authorId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE)
+
+解决办法 还有一种就是先给这个字段设置 外键不约束
+```tsx
+@ManyToOne(type => Person, {
+    createForeignKeyConstraints: false
+})
+```

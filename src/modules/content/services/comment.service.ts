@@ -67,13 +67,11 @@ export class CommentService extends BaseService<CommentEntity, CommentRepository
         if (!isNil(parent) && parent.wall.id !== data.wall) {
             throw new ForbiddenException('Parent comment and child comment must belong same post!');
         }
-        console.log("create===>", data);
         const item = await this.commentRepository.save({
             ...data,
             parent,
             wall: await this.getWall(data.wall),
         });
-        console.log("item===>", item);
         return this.commentRepository.findOneOrFail({ where: { id: item.id } });
     }
 
