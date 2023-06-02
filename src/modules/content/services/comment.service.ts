@@ -1,7 +1,6 @@
 import { Injectable, ForbiddenException } from "@nestjs/common";
 import {
   EntityNotFoundError,
-  In,
   SelectQueryBuilder
 } from 'typeorm';
 
@@ -9,64 +8,52 @@ import { CommentRepository } from "../respositories/comment.repository";
 import { CreateCommentDto, QueryCommentDto, QueryCommentTreeDto } from '../dto';
 import { isNil } from 'lodash';
 import { CommentEntity } from "../entities";
-import { manualPaginate } from '@/modules/database/helpers';
+// import { manualPaginate } from '@/modules/database/helpers';
 import { WallRepository } from "../respositories";
+import { BaseService } from "@/modules/database/base";
 
 
-
+// CommentService没有更新功能，并且不需要开启enableTrash
 @Injectable()
-export class CommentService {
-  constructor(
-    protected commentRepository: CommentRepository,
-    protected wallRepository: WallRepository,
-    ) {
+export class CommentService extends BaseService<CommentEntity, CommentRepository>  {
+    constructor(protected commentRepository: CommentRepository, protected wallRepository: WallRepository) {
+        super(commentRepository);
+    }
 
-  }
-
-  /**
+    /**
      * 直接查询评论树
      * @param options
      */
-  async findTrees(options: QueryCommentTreeDto = {}) {
-    return this.commentRepository.findTrees({
-        addQuery: (qb) => {
-            return isNil(options.wall) ? qb : qb.where('wall.id = :id', { id: options.wall });
-        },
-    });
-  }
+    async findTrees(options: QueryCommentTreeDto = {}) {
+        return this.repository.findTrees({
+            addQuery: async (qb) => {
+                return isNil(options.wall) ? qb : qb.where('wall.id = :id', { id: options.wall });
+            },
+        });
+    }
 
-   /**
+      /**
      * 查找一篇文章的评论并分页
      * @param dto
      */
-   async paginate(dto: QueryCommentDto) {
-    const { wall, ...query } = dto;
-    const addQuery = (qb: SelectQueryBuilder<CommentEntity>) => {
-        const condition: Record<string, any> = {};
-        if (!isNil(wall)) condition.wall = wall;
-        return Object.keys(condition).length > 0 ? qb.andWhere(condition) : qb;
-    };
-    const data = await this.commentRepository.findRoots({
-        addQuery,
-    });
-    let comments: CommentEntity[] = [];
-    for (let i = 0; i < data.length; i++) {
-        const c = data[i];
-        comments.push(
-            await this.commentRepository.findDescendantsTree(c, {
-                addQuery,
-            }),
-        );
-    }
-    comments = await this.commentRepository.toFlatTrees(comments);
-    return manualPaginate(query, comments);
+      async paginate(options: QueryCommentDto) {
+        const { wall } = options;
+        const addQuery = async (qb: SelectQueryBuilder<CommentEntity>) => {
+            const condition: Record<string, any> = {};
+            if (!isNil(wall)) condition.wall = wall;
+            return Object.keys(condition).length > 0 ? qb.andWhere(condition) : qb;
+        };
+        return super.paginate({
+            ...options,
+            addQuery,
+        });
     }
 
      /**
      * 获取评论所属 墙信息实例
      * @param id
      */
-     protected async getWall(id: number) {
+     protected async getWall(id: string) {
         return !isNil(id) ? this.wallRepository.findOneOrFail({ where: { id } }) : id;
     }
 
@@ -80,11 +67,13 @@ export class CommentService {
         if (!isNil(parent) && parent.wall.id !== data.wall) {
             throw new ForbiddenException('Parent comment and child comment must belong same post!');
         }
+        console.log("create===>", data);
         const item = await this.commentRepository.save({
             ...data,
             parent,
             wall: await this.getWall(data.wall),
         });
+        console.log("item===>", item);
         return this.commentRepository.findOneOrFail({ where: { id: item.id } });
     }
 
@@ -93,7 +82,7 @@ export class CommentService {
      * @param current 当前分类的ID
      * @param id
      */
-    protected async getParent(current?: number, id?: number) {
+    protected async getParent(current?: string, id?: string) {
         if (current === id) return undefined;
         let parent: CommentEntity | undefined;
         if (id !== undefined) {
@@ -107,14 +96,5 @@ export class CommentService {
             }
         }
         return parent;
-    }
-
-    /**
-     * 删除评论
-     * @param ids
-     */
-    async delete(ids: number[]) {
-        const comments = await this.commentRepository.find({ where: { id: In(ids) } });
-        return this.commentRepository.remove(comments);
     }
 }

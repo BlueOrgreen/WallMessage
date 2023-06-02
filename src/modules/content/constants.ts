@@ -10,3 +10,15 @@ export enum FeedBackType {
   like = 0,
   cancel = 1
 }
+
+
+/**
+ * 文章排序类型
+ */
+export enum PostOrderType {
+  CREATED = 'createdAt',
+  UPDATED = 'updatedAt',
+  PUBLISHED = 'publishedAt',
+  COMMENTCOUNT = 'commentCount',
+  CUSTOM = 'custom',
+}

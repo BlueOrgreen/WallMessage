@@ -1,16 +1,13 @@
 
 import { Type, Exclude, Expose } from 'class-transformer';
-import { BaseEntity, Column, CreateDateColumn, PrimaryGeneratedColumn, Entity, ManyToOne } from 'typeorm';
+import { Column, CreateDateColumn, Entity, ManyToOne } from 'typeorm';
 import { FeedBackType } from "../constants";
 import { WallEntity } from './wall.entity';
+import { BaseEntity } from '@/modules/database/base';
 
 @Exclude()
 @Entity('content_feedbacks')
 export class FeedBackEntity extends BaseEntity {
-  @Expose()
-  @PrimaryGeneratedColumn()
-  id: number;
-
   @Expose()
   @Type(() => Date)
   @CreateDateColumn({ comment: '时间' })

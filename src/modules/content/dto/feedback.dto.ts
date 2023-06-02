@@ -1,12 +1,12 @@
 import {
     IsDefined,
     IsEnum,
-    IsNumber,
+    IsUUID,
 } from 'class-validator';
 
 import { DtoValidation } from '@/modules/core/decorators';
-// import { IsDataExist } from '@/modules/database/constraints';
-// import { WallEntity } from '../entities';
+import { IsDataExist } from '@/modules/database/constraints';
+import { WallEntity } from '../entities';
 import { FeedBackType } from '../constants';
 
 /**
@@ -14,9 +14,9 @@ import { FeedBackType } from '../constants';
  */
 @DtoValidation()
 export class CreateFeedBackDto {
-  // @IsDataExist(WallEntity, { message: '指定的主体不存在' })
-  @IsNumber(undefined, { message: '文章ID格式错误' })
-  wall!: number;
+  @IsDataExist(WallEntity, { message: '所属的信息不存在' })
+  @IsUUID(undefined, { message: 'ID格式错误' })
+  wall!: string;
 
   @IsEnum(FeedBackType)
   @IsDefined({ message: '反馈类型必须指定' })

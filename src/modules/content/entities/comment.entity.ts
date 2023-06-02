@@ -1,14 +1,12 @@
 
 import { Exclude, Expose } from 'class-transformer';
-import { BaseEntity, Column, PrimaryGeneratedColumn, Entity, ManyToOne, TreeParent, TreeChildren } from 'typeorm';
+import { Column, Entity, ManyToOne, TreeParent, TreeChildren } from 'typeorm';
 import { WallEntity } from './wall.entity';
+import { BaseEntity } from '@/modules/database/base';
 
 @Exclude()
 @Entity('content_comments')
 export class CommentEntity extends BaseEntity {
-  @Expose()
-  @PrimaryGeneratedColumn()
-  id: number;
 
   @Expose()
   @Column({ comment: "头像路径", nullable: true, })

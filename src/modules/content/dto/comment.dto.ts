@@ -1,44 +1,47 @@
 import { PickType } from '@nestjs/swagger';
 import { DtoValidation } from "@/modules/core/decorators";
-import { PaginateOptions } from "@/modules/database/types";
+// import { PaginateOptions } from "@/modules/database/types";
 // import { CommentEntity, WallEntity } from "../entities";
 import {
   IsDefined,
   IsNotEmpty,
   IsOptional,
-  // IsUUID,
+  IsUUID,
   MaxLength,
   ValidateIf,
-  IsNumber,
-  Min,
+  // IsNumber,
+  // Min,
 } from 'class-validator';
-import { toNumber } from 'lodash';
+// import { toNumber } from 'lodash';
 import { Transform } from 'class-transformer';
-// import { IsDataExist } from '@/modules/database/constraints';
+import { CommentEntity, WallEntity } from '../entities';
+import { IsDataExist } from '@/modules/database/constraints';
+import { ListQueryDto } from '@/modules/restful/dtos';
 
 /**
  * 评论分页查询验证
  */
 @DtoValidation({ type: "query" })
-export class QueryCommentDto implements PaginateOptions {
+export class QueryCommentDto extends ListQueryDto {
   // @IsDataExist(WallEntity, {
   //   message: '所属的信息不存在',
   // })
-  @IsNumber(undefined, { message: '分类ID格式错误' })
+  @IsDataExist(WallEntity, { message: '所属的信息不存在' })
+  @IsUUID(undefined, { message: 'ID格式错误' })
   @IsOptional()
   wall?: number;
 
-  @Transform(({ value }) => toNumber(value))
-  @Min(1, { message: '当前页必须大于1' })
-  @IsNumber()
-  @IsOptional()
-  page = 1;
+  // @Transform(({ value }) => toNumber(value))
+  // @Min(1, { message: '当前页必须大于1' })
+  // @IsNumber()
+  // @IsOptional()
+  // page = 1;
 
-  @Transform(({ value }) => toNumber(value))
-  @Min(1, { message: '每页显示数据必须大于1' })
-  @IsNumber()
-  @IsOptional()
-  limit = 10;
+  // @Transform(({ value }) => toNumber(value))
+  // @Min(1, { message: '每页显示数据必须大于1' })
+  // @IsNumber()
+  // @IsOptional()
+  // limit = 10;
 }
 
 /**
@@ -56,15 +59,15 @@ export class CreateCommentDto {
     @IsNotEmpty({ message: '评论内容不能为空' })
     comment!: string;
 
-    // @IsDataExist(WallEntity, { message: '指定的信息不存在' })
-    @IsNumber(undefined, { message: '信息ID格式错误' })
+    @IsDataExist(WallEntity, { message: '指定的文章不存在' })
+    @IsUUID(undefined, { message: '文章ID格式错误' })
     @IsDefined({ message: '评论文章ID必须指定' })
-    wall!: number;
+    wall!: string;
 
-    // @IsDataExist(CommentEntity, { message: '父评论不存在' })
-    @IsNumber(undefined, { message: '父评论ID格式不正确' })
+    @IsDataExist(CommentEntity, { message: '父评论不存在' })
+    @IsUUID(undefined, { message: '父评论ID格式不正确' })
     @ValidateIf((value) => value.parent !== null && value.parent)
     @IsOptional()
     @Transform(({ value }) => (value === 'null' ? null : value))
-    parent?: number;
+    parent?: string;
 }

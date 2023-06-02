@@ -31,11 +31,8 @@ export class DataExistConstraint implements ValidatorConstraintInterface {
         // 通过传入的entity获取其repository
         if ('entity' in args.constraints[0]) {
             map = args.constraints[0].map ?? 'id';
-            console.log("test===>1", this.dataSource);
-            
             repo = this.dataSource.getRepository(args.constraints[0].entity);
         } else {
-            console.log("test===>2", this.dataSource);
             repo = this.dataSource.getRepository(args.constraints[0]);
         }
         // 通过查询记录是否存在进行验证

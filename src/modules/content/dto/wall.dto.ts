@@ -1,49 +1,37 @@
-import { PaginateOptions } from "@/modules/database/types";
+// import { PaginateOptions } from "@/modules/database/types";
 import { Transform } from 'class-transformer';
 import {
   IsNotEmpty,
   // IsBoolean,
   IsDateString,
-  // IsDefined,
-  // IsEnum,
+  IsDefined,
+  IsEnum,
   // IsNotEmpty,
-  IsNumber,
+  // IsNumber,
   IsOptional,
   MaxLength,
-  // IsUUID,
+  IsUUID,
   // MaxLength,
-  Min,
+  // Min,
   ValidateIf,
 } from 'class-validator';
-import { toNumber, isNil } from 'lodash';
+import { isNil } from 'lodash';
 import { DtoValidation } from '@/modules/core/decorators';
-import { WallTypeEnum } from "../constants";
+import { WallTypeEnum, PostOrderType } from "../constants";
+import { PartialType } from "@nestjs/swagger";
+import { ListWithTrashedQueryDto } from "@/modules/restful/dtos";
 
 
 /**
  * 分类分页查询验证
  */
 @DtoValidation({ type: 'query' })
-export class QueryWallDto implements PaginateOptions {
+export class QueryWallDto extends ListWithTrashedQueryDto {
+  @IsEnum(PostOrderType, {
+    message: `排序规则必须是${Object.values(PostOrderType).join(',')}其中一项`,
+  })
   @IsOptional()
-  label?: string;
-
-  @Transform(({ value }) => toNumber(value))
-  @IsNumber()
-  @IsOptional()
-  type = 0
-
-  @Transform(({ value }) => toNumber(value))
-  @Min(1, { message: '当前页必须大于1' })
-  @IsNumber()
-  @IsOptional()
-  page = 1;
-
-  @Transform(({ value }) => toNumber(value))
-  @Min(1, { message: '每页显示数据必须大于1' })
-  @IsNumber()
-  @IsOptional()
-  limit = 10;
+  orderBy?: PostOrderType;
 }
 
 
@@ -56,7 +44,7 @@ export class CreateWallDto {
     always: true,
     message: '留言内容最大长度为$',
   })
-  // @IsNotEmpty({ groups: ['create'], message: '留言内容必须填写' })
+  @IsNotEmpty({ groups: ['create'], message: '留言内容必须填写' })
   @IsOptional({ groups: ['update'] })
   message?: string
 
@@ -85,4 +73,14 @@ export class CreateWallDto {
 
   @IsOptional({ always: true })
   color?: string
+}
+
+/**
+ * 文章更新验证
+ */
+@DtoValidation({ groups: ['update'] })
+export class UpdateWallDto extends PartialType(CreateWallDto) {
+  @IsUUID(undefined, { groups: ['update'], message: '文章ID格式错误' })
+  @IsDefined({ groups: ['update'], message: '文章ID必须指定' })
+  id!: string;
 }

@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { omit } from 'lodash';
 import { SelectQueryBuilder, EntityNotFoundError } from 'typeorm';
 import { paginate } from '@/modules/database/helpers';
 import { WallRepository } from '../respositories';
 import { WallEntity } from '../entities';
 import { QueryHook } from '@/modules/database/types';
-import { CreateWallDto, QueryWallDto } from '../dto/wall.dto';
+import { CreateWallDto, QueryWallDto, UpdateWallDto } from '../dto/wall.dto';
 import { isFunction, isNil } from 'lodash';
+import { BaseService } from '@/modules/database/base';
 
 
 // 文章查询接口
@@ -14,10 +16,13 @@ type FindParams = {
 };
 
 @Injectable()
-export class WallService {
+export class WallService extends BaseService<WallEntity, WallRepository, FindParams> {
+  // protected enableTrash = true; // enableTrash属性用于确定该服务所操作的模型是否支持软删除
   constructor(
     protected wallRepository: WallRepository
-  ) {}
+  ) {
+    super(wallRepository);
+  }
 
   /**
      * 获取分页数据
@@ -77,13 +82,22 @@ export class WallService {
      * @param id
      * @param callback 添加额外的查询
      */
-     async detail(id: number, callback?: QueryHook<WallEntity>) {
+     async detail(id: string, callback?: QueryHook<WallEntity>) {
       let qb = this.wallRepository.buildBaseQB();
-      qb.where(`wall.id = :id`, { id });
       qb = !isNil(callback) && isFunction(callback) ? await callback(qb) : qb;
       const item = await qb.getOne();
       if (!item) throw new EntityNotFoundError(WallEntity, `The post ${id} not exists!`);
-      console.log('detail item', item);
       return item;
+    }
+
+    /**
+     * 更新文章
+     * @param data
+     */
+    async update(data: UpdateWallDto) {
+      // const post = await this.detail(data.id);
+
+      await this.repository.update(data.id, omit(data, ['id']));
+      return this.detail(data.id);
   }
 }

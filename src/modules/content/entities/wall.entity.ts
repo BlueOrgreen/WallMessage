@@ -1,16 +1,13 @@
 import { Type, Exclude, Expose } from 'class-transformer';
-import { BaseEntity, Column, CreateDateColumn, PrimaryGeneratedColumn, Entity, OneToMany } from 'typeorm';
+import { Column, CreateDateColumn, Entity, OneToMany } from 'typeorm';
 import { WallTypeEnum } from '../constants';
 import { CommentEntity } from './comment.entity';
 import { FeedBackEntity } from './feedback.entity';
+import { BaseEntity } from '@/modules/database/base';
 
 @Exclude()
 @Entity('content_walls')
 export class WallEntity extends BaseEntity {
-    @Expose()
-    @PrimaryGeneratedColumn()
-      id: number
-
     @Expose()
     @Column({ comment: "类型" })
     type: WallTypeEnum
@@ -55,6 +52,9 @@ export class WallEntity extends BaseEntity {
     commentCount: number;
 
     @Expose()
+    feedBackCount: number;
+
+    @Expose()
     @Column({ comment: "图片路径", nullable: true, })
     imgUrl: string | null;
 
@@ -68,7 +68,7 @@ export class WallEntity extends BaseEntity {
     // @JoinColumn()
     @OneToMany(() => FeedBackEntity, (feedback) => feedback.wall, {
       cascade: true,
-      eager: true,
+      // eager: true,
     })
     feedbacks: FeedBackEntity[]
 

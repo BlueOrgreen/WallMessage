@@ -14,9 +14,7 @@ export class FeedBackService {
      * 获取评论所属文章实例
      * @param id
      */
-       protected async getPost(id: number) {
-        console.log("id====>", id, this.wallRepository.findOneOrFail({ where: { id } }));
-        
+       protected async getPost(id: string) {
         return !isNil(id) ? this.wallRepository.findOneOrFail({ where: { id } }) : id;
     }
 
@@ -31,13 +29,10 @@ export class FeedBackService {
     // if (!isNil(parent) && parent.post.id !== data.post) {
     //     throw new ForbiddenException('Parent comment and child comment must belong same post!');
     // }
-    console.log("test create 1");
-    
     const item = await this.feedBackRepository.save({
         ...data,
         wall: await this.getPost(data.wall),
     });
-    console.log("item===>", item);
     
     return this.feedBackRepository.findOneOrFail({ where: { id: item.id } });
   }
