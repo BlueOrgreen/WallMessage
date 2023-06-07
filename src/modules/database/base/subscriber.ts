@@ -1,53 +1,81 @@
 import { isNil } from 'lodash';
 import {
+    EntityManager,
     EntitySubscriberInterface,
     EventSubscriber,
     ObjectLiteral,
     ObjectType,
     UpdateEvent,
-    InsertEvent,
-    SoftRemoveEvent,
-    RemoveEvent,
-    RecoverEvent,
-    TransactionStartEvent,
-    TransactionCommitEvent,
-    TransactionRollbackEvent,
-    EntityTarget,
+    Repository,
+    TreeRepository,
     DataSource,
 } from 'typeorm';
 
-import { getCustomRepository } from '../helpers';
+import { SubcriberSetting } from '../types';
 
-import { RepositoryType } from '../types';
+import { BaseRepository } from './repository';
+import { BaseTreeRepository } from './tree.repository';
 
-type SubscriberEvent<E extends ObjectLiteral> =
-    | InsertEvent<E>
-    | UpdateEvent<E>
-    | SoftRemoveEvent<E>
-    | RemoveEvent<E>
-    | RecoverEvent<E>
-    | TransactionStartEvent
-    | TransactionCommitEvent
-    | TransactionRollbackEvent;
-
+type SubscriberRepo<E extends ObjectLiteral> =
+    | Repository<E>
+    | TreeRepository<E>
+    | BaseRepository<E>
+    | BaseTreeRepository<E>;
 /**
- * 基础模型观察者
+ * @description 基础模型观察者
+ * @export
+ * @abstract
+ * @class BaseSubscriber
+ * @implements {EntitySubscriberInterface<E>}
+ * @template E
+ * @template Y
  */
 @EventSubscriber()
 export abstract class BaseSubscriber<E extends ObjectLiteral>
     implements EntitySubscriberInterface<E>
 {
     /**
-     * 监听的模型
+     * @description 数据库连接
+     * @protected
+     * @type {Connection}
+     */
+    protected dataSource: DataSource;
+
+    /**
+     * @description EntityManager
+     * @protected
+     * @type {EntityManager}
+     */
+    protected em!: EntityManager;
+
+    /**
+     * @description 监听的模型
+     * @protected
+     * @abstract
+     * @type {ObjectType<E>}
      */
     protected abstract entity: ObjectType<E>;
 
     /**
-     * 构造函数
-     * @param dataSource 数据连接池
+     * @description 自定义存储类
+     * @protected
+     * @type {Type<SubscriberRepo<E>>}
      */
-    constructor(protected dataSource: DataSource) {
+    protected repository?: SubscriberRepo<E>;
+
+    /**
+     * @description 一些相关的设置
+     * @protected
+     * @type {SubcriberSetting}
+     */
+    protected setting!: SubcriberSetting;
+
+    constructor(dataSource: DataSource, repository?: SubscriberRepo<E>) {
+        this.dataSource = dataSource;
         this.dataSource.subscribers.push(this);
+        this.em = this.dataSource.manager;
+        this.setRepository(repository);
+        if (!this.setting) this.setting = {};
     }
 
     listenTo() {
@@ -56,33 +84,26 @@ export abstract class BaseSubscriber<E extends ObjectLiteral>
 
     async afterLoad(entity: any) {
         // 是否启用树形
-        if ('parent' in entity && isNil(entity.depth)) entity.depth = 0;
+        if (this.setting.tree && isNil(entity.level)) entity.level = 0;
+        // 是否启用软删除
+        if (this.setting.trash) entity.trashed = !!entity.deletedAt;
     }
 
-    protected getDataSource(event: SubscriberEvent<E>) {
-        return event.connection;
-    }
-
-    protected getManage(event: SubscriberEvent<E>) {
-        return event.manager;
-    }
-
-    protected getRepositoy<
-        C extends ClassType<T>,
-        T extends RepositoryType<E>,
-        A extends EntityTarget<ObjectLiteral>,
-    >(event: SubscriberEvent<E>, repository?: C, entity?: A) {
-        return isNil(repository)
-            ? this.getDataSource(event).getRepository(entity ?? this.entity)
-            : getCustomRepository<T, E>(this.getDataSource(event), repository);
+    protected setRepository(repository?: SubscriberRepo<E>) {
+        this.repository = isNil(repository)
+            ? this.dataSource.getRepository(this.entity)
+            : repository;
     }
 
     /**
-     * 判断某个字段是否被更新
-     * @param cloumn
-     * @param event
+     * @description 判断某个属性是否被更新
+     * @protected
+     * @param {keyof E} cloumn
+     * @param {UpdateEvent<E>} event
      */
     protected isUpdated(cloumn: keyof E, event: UpdateEvent<E>) {
-        return !!event.updatedColumns.find((item) => item.propertyName === cloumn);
+        return !!event.updatedColumns.find(
+            (item) => item.propertyName === cloumn,
+        );
     }
 }

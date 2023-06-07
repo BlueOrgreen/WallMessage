@@ -33,8 +33,7 @@ export abstract class BaseController<S> {
         data: any,
         ...args: any[]
     ) {
-        console.log("controller", data);
-        
+        console.log('controller', data);
         return (this.service as any).create(data);
     }
 

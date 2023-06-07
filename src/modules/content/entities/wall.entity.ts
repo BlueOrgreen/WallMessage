@@ -1,28 +1,47 @@
 import { Type, Exclude, Expose } from 'class-transformer';
-import { Column, CreateDateColumn, Entity, OneToMany } from 'typeorm';
+import {
+    Column,
+    CreateDateColumn,
+    Entity,
+    ManyToOne,
+    OneToMany,
+} from 'typeorm';
+
+import { BaseEntity } from '@/modules/database/base';
+
+import { UserEntity } from '@/modules/user/entities';
+
 import { WallTypeEnum } from '../constants';
+
 import { CommentEntity } from './comment.entity';
 import { FeedBackEntity } from './feedback.entity';
-import { BaseEntity } from '@/modules/database/base';
 
 @Exclude()
 @Entity('content_walls')
 export class WallEntity extends BaseEntity {
     @Expose()
-    @Column({ comment: "类型" })
-    type: WallTypeEnum
+    @Column({ comment: '类型' })
+    type: WallTypeEnum;
 
     @Expose()
-    @Column({ comment: "留言" })
-    message: string
+    @Column({ comment: '留言' })
+    message: string;
 
     @Expose()
-    @Column({ comment: "用户名" })
-    name: string
+    @Column({ comment: '用户名' })
+    name: string;
 
     @Expose()
-    @Column({ comment: "创建者ID" })
-    userId: string
+    @Column({ comment: '创建者ID' })
+    userId: string;
+
+    @Expose()
+    @ManyToOne(() => UserEntity, (user) => user.walls, {
+        nullable: false,
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
+    })
+    author!: UserEntity;
 
     @Expose()
     @Type(() => Date)
@@ -41,11 +60,11 @@ export class WallEntity extends BaseEntity {
     createdAt: Date;
 
     @Expose()
-    @Column({ comment: "标签" })
-    label: string
+    @Column({ comment: '标签' })
+    label: string;
 
     @Expose()
-    @Column({ comment: "颜色", nullable: true, })
+    @Column({ comment: '颜色', nullable: true })
     color: string | null;
 
     @Expose()
@@ -55,21 +74,19 @@ export class WallEntity extends BaseEntity {
     feedBackCount: number;
 
     @Expose()
-    @Column({ comment: "图片路径", nullable: true, })
+    @Column({ comment: '图片路径', nullable: true })
     imgUrl: string | null;
 
     @OneToMany(() => CommentEntity, (comment) => comment.wall, {
-      cascade: true,
+        cascade: true,
     })
-    comments: CommentEntity[]
-    
+    comments: CommentEntity[];
 
     // @OneToOne(() => FeedBackEntity)
     // @JoinColumn()
     @OneToMany(() => FeedBackEntity, (feedback) => feedback.wall, {
-      cascade: true,
-      // eager: true,
+        cascade: true,
+        // eager: true,
     })
-    feedbacks: FeedBackEntity[]
-
+    feedbacks: FeedBackEntity[];
 }

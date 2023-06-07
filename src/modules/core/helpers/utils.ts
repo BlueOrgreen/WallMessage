@@ -21,3 +21,23 @@ export function toBoolean(value?: string | boolean): boolean {
 export function toNull(value?: string | null): string | null | undefined {
     return value === 'null' ? null : value;
 }
+
+/**
+ * 用于请求验证中的number数据转义
+ *
+ * @export
+ * @param {(string | number)} [value]
+ * @returns {*}  {(number | undefined)}
+ */
+export function tNumber(value?: string | number): string | number | undefined {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        try {
+            return Number(value);
+        } catch (error) {
+            return value;
+        }
+    }
+
+    return value;
+}

@@ -28,3 +28,22 @@ export enum TreeChildrenResolve {
     UP = 'up',
     ROOT = 'root',
 }
+
+/**
+ * 运行环境
+ */
+export enum EnvironmentType {
+    DEVELOPMENT = 'development',
+    PRODUCTION = 'production',
+    TEST = 'test',
+    PREVIEW = 'preview',
+}
+
+/**
+ * 软删除数据查询类型
+ */
+export enum QueryTrashMode {
+    ALL = 'all', // 包含已软删除和未软删除的数据
+    ONLY = 'only', // 只包含软删除的数据
+    NONE = 'none', // 只包含未软删除的数据
+}

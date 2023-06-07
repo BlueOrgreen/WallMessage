@@ -4,12 +4,24 @@ import { ClassTransformOptions } from 'class-transformer';
 /**
  * CURD控制器方法列表
  */
-export type CurdMethod = 'detail' | 'delete' | 'restore' | 'list' | 'store' | 'update';
+export type CurdMethod =
+    | 'detail'
+    | 'delete'
+    | 'restore'
+    | 'list'
+    | 'store'
+    | 'update'
+    | 'deleteMulti'
+    | 'restoreMulti';
 
 /**
  * CRUD装饰器的方法选项
  */
 export interface CrudMethodOption {
+    /**
+     * 该方法是否允许匿名访问
+     */
+    allowGuest?: boolean;
     /**
      * 序列化选项,如果为`noGroup`则不传参数，否则根据`id`+方法匹配来传参
      */
@@ -32,7 +44,10 @@ export interface CurdOptions {
     // 需要启用的方法
     enabled: Array<CurdMethod | CurdItem>;
     // 一些方法要使用到的自定义DTO
+    // dtos: {
+    //     [key in 'query' | 'create' | 'update']?: Type<any>;
+    // };
     dtos: {
-        [key in 'list' | 'store' | 'update']?: Type<any>;
+        [key in 'list' | 'store' | 'update' | 'query' | 'create']?: Type<any>;
     };
 }

@@ -2,7 +2,7 @@ import { ArgumentMetadata, Injectable, Paramtype, ValidationPipe } from '@nestjs
 import merge from 'deepmerge';
 import { isObject, omit } from 'lodash';
 
-import { DTO_VALIDATION_OPTIONS } from '../constant';
+import { DTO_VALIDATION_OPTIONS } from '../constants';
 
 /**
  * 全局管道,用于处理DTO验证

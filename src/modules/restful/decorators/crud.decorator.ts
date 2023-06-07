@@ -1,115 +1,125 @@
-/* eslint-disable new-cap */
-import { Get, Type, Post, Patch, Delete, SerializeOptions } from '@nestjs/common';
-import { ClassTransformOptions } from 'class-transformer';
+import { NotFoundException, Type } from '@nestjs/common';
+import { CLASS_SERIALIZER_OPTIONS } from '@nestjs/common/serializer/class-serializer.constants';
 import { isNil } from 'lodash';
 
-import { BaseController, BaseControllerWithTrash } from '../base';
+import { BaseController } from '../base';
 
-import { CRUD_OPTIONS } from '../constants';
+import { ALLOW_GUEST, CRUD_OPTIONS } from '../constants';
+// import { BaseController } from '../crud/controller';
 
-import { CurdItem, CurdOptions } from '../types';
+import { CurdItem, CurdMethod, CurdOptions } from '../types';
 
-/**
- * 控制器上的CRUD装饰器
- * @param options
- */
 export const Crud =
     (options: CurdOptions) =>
-    <T extends BaseController<any> | BaseControllerWithTrash<any>>(Target: Type<T>) => {
+    <T extends BaseController<any>>(Target: Type<T>) => {
         Reflect.defineMetadata(CRUD_OPTIONS, options, Target);
-
-        const { id, enabled, dtos } = Reflect.getMetadata(CRUD_OPTIONS, Target) as CurdOptions;
-        const methods: CurdItem[] = [];
-        // 添加启用的CRUD方法
+        const { id, enabled, dtos } = Reflect.getMetadata(
+            CRUD_OPTIONS,
+            Target,
+        ) as CurdOptions;
+        const changed: Array<CurdMethod> = [];
+        // 添加验证DTO类
         for (const value of enabled) {
-            const item = (typeof value === 'string' ? { name: value } : value) as CurdItem;
-            if (
-                methods.map(({ name }) => name).includes(item.name) ||
-                !isNil(Object.getOwnPropertyDescriptor(Target.prototype, item.name))
-            )
-                continue;
-            methods.push(item);
+            const { name } = (
+                typeof value === 'string' ? { name: value } : value
+            ) as CurdItem;
+            if (changed.includes(name)) continue;
+            if (name in Target.prototype) {
+                let method = Object.getOwnPropertyDescriptor(
+                    Target.prototype,
+                    name,
+                );
+                if (isNil(method)) {
+                    method = Object.getOwnPropertyDescriptor(
+                        BaseController.prototype,
+                        name,
+                    );
+                }
+                const paramTypes = Reflect.getMetadata(
+                    'design:paramtypes',
+                    Target.prototype,
+                    name,
+                );
+                const params = [...paramTypes];
+                if (name === 'store') params[0] = dtos.create;
+                else if (name === 'update') params[0] = dtos.update;
+                else if (
+                    name === 'list' ||
+                    name === 'deleteMulti' ||
+                    name === 'restoreMulti'
+                )
+                    params[0] = dtos.query;
+                Reflect.defineMetadata(
+                    'design:paramtypes',
+                    params,
+                    Target.prototype,
+                    name,
+                );
+                changed.push(name);
+            }
         }
-        // 添加控制器方法的具体实现,参数的DTO类型,方法及路径装饰器,序列化选项,是否允许匿名访问等metadata
-        // 添加其它回调函数
-        for (const { name, option = {} } of methods) {
-            if (isNil(Object.getOwnPropertyDescriptor(Target.prototype, name))) {
-                const descriptor =
-                    Target instanceof BaseControllerWithTrash
-                        ? Object.getOwnPropertyDescriptor(BaseControllerWithTrash.prototype, name)
-                        : Object.getOwnPropertyDescriptor(BaseController.prototype, name);
-
-                Object.defineProperty(Target.prototype, name, {
-                    ...descriptor,
-                    async value(...args: any[]) {
-                        return descriptor.value.apply(this, args);
-                    },
-                });
-            }
-
-            const descriptor = Object.getOwnPropertyDescriptor(Target.prototype, name);
-
-            const [, ...params] = Reflect.getMetadata('design:paramtypes', Target.prototype, name);
-
-            if (name === 'store' && !isNil(dtos.store)) {
-                Reflect.defineMetadata(
-                    'design:paramtypes',
-                    [dtos.store, ...params],
-                    Target.prototype,
-                    name,
-                );
-            } else if (name === 'update' && !isNil(dtos.update)) {
-                Reflect.defineMetadata(
-                    'design:paramtypes',
-                    [dtos.update, ...params],
-                    Target.prototype,
-                    name,
-                );
-            } else if (name === 'list' && !isNil(dtos.list)) {
-                Reflect.defineMetadata(
-                    'design:paramtypes',
-                    [dtos.list, ...params],
-                    Target.prototype,
-                    name,
-                );
-            }
-
-            let serialize: ClassTransformOptions = {};
+        // 添加序列化选项以及是否允许匿名访问等metadata
+        for (const key of changed) {
+            const find = enabled.find(
+                (v) => v === key || (v as any).name === key,
+            );
+            const option = typeof find === 'string' ? {} : find.option ?? {};
+            let serialize = {};
             if (isNil(option.serialize)) {
-                if (['detail', 'store', 'update', 'delete', 'restore'].includes(name)) {
+                if (
+                    ['detail', 'store', 'update', 'delete', 'restore'].includes(
+                        key,
+                    )
+                ) {
                     serialize = { groups: [`${id}-detail`] };
-                } else if (['list'].includes(name)) {
+                } else if (
+                    ['list', 'deleteMulti', 'restoreMulti'].includes(key)
+                ) {
                     serialize = { groups: [`${id}-list`] };
                 }
             } else if (option.serialize === 'noGroup') {
                 serialize = {};
-            } else {
-                serialize = option.serialize;
             }
-            SerializeOptions(serialize)(Target, name, descriptor);
-
-            switch (name) {
-                case 'list':
-                    Get()(Target, name, descriptor);
-                    break;
-                case 'detail':
-                    Get(':id')(Target, name, descriptor);
-                    break;
-                case 'store':
-                    Post()(Target, name, descriptor);
-                    break;
-                case 'update':
-                    Patch()(Target, name, descriptor);
-                    break;
-                case 'delete':
-                    Delete()(Target, name, descriptor);
-                    break;
-                default:
-                    break;
+            Reflect.defineMetadata(
+                CLASS_SERIALIZER_OPTIONS,
+                serialize,
+                Target.prototype,
+                key,
+            );
+            if (option.allowGuest) {
+                Reflect.defineMetadata(
+                    ALLOW_GUEST,
+                    true,
+                    Target.prototype,
+                    key,
+                );
             }
-
-            if (!isNil(option.hook)) option.hook(Target, name);
         }
-
+        // 对于不启用的方法返回404
+        const fixedProperties = ['constructor', 'service', 'setService'];
+        for (const key of Object.getOwnPropertyNames(
+            BaseController.prototype,
+        )) {
+            const isEnabled = options.enabled.find((v) =>
+                typeof v === 'string' ? v === key : (v as any).name === key,
+            );
+            if (!isEnabled && !fixedProperties.includes(key)) {
+                let method = Object.getOwnPropertyDescriptor(
+                    Target.prototype,
+                    key,
+                );
+                if (isNil(method))
+                    method = Object.getOwnPropertyDescriptor(
+                        BaseController.prototype,
+                        key,
+                    );
+                Object.defineProperty(Target.prototype, key, {
+                    ...method,
+                    async value(...args: any[]) {
+                        return new NotFoundException();
+                    },
+                });
+            }
+        }
         return Target;
     };

@@ -4,7 +4,12 @@ import { In, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 import { SelectTrashMode, TreeChildrenResolve } from '../constants';
 import { manualPaginate, paginate } from '../helpers';
-import { QueryHook, ServiceListQueryOption, PaginateReturn, PaginateOptions } from '../types';
+import {
+    QueryHook,
+    ServiceListQueryOption,
+    PaginateReturn,
+    PaginateOptions,
+} from '../types';
 
 import { BaseRepository } from './repository';
 import { BaseTreeRepository } from './tree.repository';
@@ -51,8 +56,10 @@ export abstract class BaseService<
         if (this.repository instanceof BaseTreeRepository) {
             const withTrashed =
                 this.enableTrash &&
-                (trashed === SelectTrashMode.ALL || trashed === SelectTrashMode.ONLY);
-            const onlyTrashed = this.enableTrash && trashed === SelectTrashMode.ONLY;
+                (trashed === SelectTrashMode.ALL ||
+                    trashed === SelectTrashMode.ONLY);
+            const onlyTrashed =
+                this.enableTrash && trashed === SelectTrashMode.ONLY;
             const tree = await this.repository.findTrees({
                 ...options,
                 withTrashed,
@@ -60,7 +67,11 @@ export abstract class BaseService<
             });
             return this.repository.toFlatTrees(tree);
         }
-        const qb = await this.buildListQB(this.repository.buildBaseQB(), options, callback);
+        const qb = await this.buildListQB(
+            this.repository.buildBaseQB(),
+            options,
+            callback,
+        );
         return qb.getMany();
     }
 
@@ -78,7 +89,11 @@ export abstract class BaseService<
             const data = await this.list(queryOptions, callback);
             return manualPaginate(options, data) as PaginateReturn<E>;
         }
-        const qb = await this.buildListQB(this.repository.buildBaseQB(), queryOptions, callback);
+        const qb = await this.buildListQB(
+            this.repository.buildBaseQB(),
+            queryOptions,
+            callback,
+        );
         return paginate(qb, options);
     }
 
@@ -89,9 +104,16 @@ export abstract class BaseService<
      * @param callback 回调查询
      */
     async detail(id: string, callback?: QueryHook<E>): Promise<E> {
-        const qb = await this.buildItemQB(id, this.repository.buildBaseQB(), callback);
+        const qb = await this.buildItemQB(
+            id,
+            this.repository.buildBaseQB(),
+            callback,
+        );
         const item = await qb.getOne();
-        if (!item) throw new NotFoundException(`${this.repository.qbName} ${id} not exists!`);
+        if (!item)
+            throw new NotFoundException(
+                `${this.repository.qbName} ${id} not exists!`,
+            );
         return item;
     }
 
@@ -101,7 +123,9 @@ export abstract class BaseService<
      * @param others 其它参数
      */
     create(data: any, ...others: any[]): Promise<E> {
-        throw new ForbiddenException(`Can not to create ${this.repository.qbName}!`);
+        throw new ForbiddenException(
+            `Can not to create ${this.repository.qbName}!`,
+        );
     }
 
     /**
@@ -110,7 +134,9 @@ export abstract class BaseService<
      * @param others 其它参数
      */
     update(data: any, ...others: any[]): Promise<E> {
-        throw new ForbiddenException(`Can not to update ${this.repository.qbName}!`);
+        throw new ForbiddenException(
+            `Can not to update ${this.repository.qbName}!`,
+        );
     }
 
     /**
@@ -128,7 +154,8 @@ export abstract class BaseService<
             });
             if (this.repository.childrenResolve === TreeChildrenResolve.UP) {
                 for (const item of items) {
-                    if (isNil(item.children) || item.children.length <= 0) continue;
+                    if (isNil(item.children) || item.children.length <= 0)
+                        continue;
                     const nchildren = [...item.children].map((c) => {
                         c.parent = item.parent;
                         return item;
@@ -184,7 +211,11 @@ export abstract class BaseService<
      * @param qb querybuilder实例
      * @param callback 查询回调
      */
-    protected async buildItemQB(id: string, qb: SelectQueryBuilder<E>, callback?: QueryHook<E>) {
+    protected async buildItemQB(
+        id: string,
+        qb: SelectQueryBuilder<E>,
+        callback?: QueryHook<E>,
+    ) {
         qb.where(`${this.repository.qbName}.id = :id`, { id });
         if (callback) return callback(qb);
         return qb;
@@ -196,13 +227,18 @@ export abstract class BaseService<
      * @param options 查询选项
      * @param callback 查询回调
      */
-    protected async buildListQB(qb: SelectQueryBuilder<E>, options?: P, callback?: QueryHook<E>) {
+    protected async buildListQB(
+        qb: SelectQueryBuilder<E>,
+        options?: P,
+        callback?: QueryHook<E>,
+    ) {
         const { trashed } = options ?? {};
         const queryName = this.repository.qbName;
         // 是否查询回收站
         if (
             this.enableTrash &&
-            (trashed === SelectTrashMode.ALL || trashed === SelectTrashMode.ONLY)
+            (trashed === SelectTrashMode.ALL ||
+                trashed === SelectTrashMode.ONLY)
         ) {
             qb.withDeleted();
             if (trashed === SelectTrashMode.ONLY) {
